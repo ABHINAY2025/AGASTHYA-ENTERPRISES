@@ -9,6 +9,10 @@ Font.register({
   src: '/fonts/NotoSans_ExtraCondensed-Regular.ttf', // Path relative to the public folder
 });
 Font.register({
+  family: 'outfit', // This is the name you will use in styles
+  src: '/fonts/Outfit-SemiBold.ttf', // Path relative to the public folder
+});
+Font.register({
   family: 'times', // This is the name you will use in styles
   src: '/fonts/Tinos-Regular.ttf', // Path relative to the public folder
 });
@@ -61,7 +65,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap:10,
     marginBottom: 20,
-    fontFamily:'times',
+    fontFamily:'outfit',
     borderBottom:1
   },
   companyInfo: {
@@ -81,12 +85,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textDecoration: 'underline',
     marginBottom: 2,
+    fontFamily:'outfit',
     marginLeft:35
   },
   companyName: {
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+    fontFamily:'outfit'
 
   },
   companyBox: {
@@ -199,6 +205,7 @@ const styles = StyleSheet.create({
   vertical:{
     marginTop:10,
     marginLeft:30,
+    fontFamily:'times'
   }
 });
 
@@ -216,39 +223,53 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
   const sgst = (data.sgst / 100) * subtotal;
   const total = subtotal + cgst + sgst;
 
-  const numberToWords = (num: number): string => {
-    const belowTwenty = [
-      'Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-      'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-      'Seventeen', 'Eighteen', 'Nineteen'
-    ];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  
-    const convertBelowThousand = (n: number): string => {
-      if (n < 20) return belowTwenty[n];
-      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + belowTwenty[n % 10] : '');
-      return belowTwenty[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + convertBelowThousand(n % 100) : '');
-    };
-  
-    if (num === 0) return 'Zero';
-    if (num >= 1000) {
-      const thousands = Math.floor(num / 1000);
-      const remainder = num % 1000;
-      return `${convertBelowThousand(thousands)} Thousand${remainder ? ' ' + convertBelowThousand(remainder) : ''}`;
-    }
-    return convertBelowThousand(num);
+  function roundOff(number: number, decimalPlaces: number): number {
+    const factor = Math.pow(10, decimalPlaces);
+    return Math.round(number * factor) / factor;
+
+}  
+const roundedToInteger = roundOff(total, 0); 
+
+const numberToWords = (num: number): string => {
+  const belowTwenty = [
+    'Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+    'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const convertBelowThousand = (n: number): string => {
+    if (n < 20) return belowTwenty[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + belowTwenty[n % 10] : '');
+    return belowTwenty[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + convertBelowThousand(n % 100) : '');
   };
-  
+
+  if (num === 0) return 'Zero';
+
+  if (num >= 100000) {
+    const lakhs = Math.floor(num / 100000);
+    const remainder = num % 100000;
+    return `${convertBelowThousand(lakhs)} Lakh${remainder ? ' ' + numberToWords(remainder) : ''}`;
+  }
+
+  if (num >= 1000) {
+    const thousands = Math.floor(num / 1000);
+    const remainder = num % 1000;
+    return `${convertBelowThousand(thousands)} Thousand${remainder ? ' ' + convertBelowThousand(remainder) : ''}`;
+  }
+
+  return convertBelowThousand(num);
+};
+
   // Usage:
   const totalInWords = numberToWords(Math.floor(total)).toUpperCase();
-  
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <PdfView style={styles.header}>
           <PdfView>
-                <PdfText>GSTIN:36AINPJ0953A1ZJ</PdfText>
+                <PdfText style={{fontSize:12}}>GSTIN:<PdfText style={{fontSize:14,fontFamily:'outfit',fontWeight:'bold'}}>36AINPJ0953A1ZJ</PdfText></PdfText>
                 <PdfImage src={Logo} style={styles.logo} /> 
           </PdfView>
           <PdfView style={styles.companyInfo}>
@@ -262,8 +283,8 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
           </PdfView>
 
           <PdfView style={styles.vertical}>
-            <PdfText  style={{ marginBottom: 5 }}>Invoice #: {data.invoiceNumber}</PdfText>
-            <PdfText  style={{ marginBottom: 5 }}>Date: {new Date(data.date).toLocaleDateString()}</PdfText>
+            <PdfText  style={{ marginBottom: 5 }}>Invoice #: <PdfText style={{fontSize:16, color:'red'}}>{data.invoiceNumber}</PdfText></PdfText>
+            <PdfText  style={{ marginBottom: 5 }}>Date: {data.date}</PdfText>
             <PdfText  style={{ marginBottom: 5 }}>Phone: {data.phone}</PdfText>
           </PdfView>
         </PdfView>
@@ -297,10 +318,8 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
     Amount
   </PdfText>
 </PdfView>
-
-
-          {/* Table Body */}
-          {data.items.map((item, index) => (
+     {/* Table Body */}
+{data.items.map((item, index) => (
   <PdfView key={index} style={styles.tableRow}>
     <PdfText style={{ ...styles.tableCell, borderLeft: '1px solid black', borderRight: '1px solid black', width: 40, textAlign: 'center' }}>
       {index + 1}
@@ -311,14 +330,14 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
     <PdfText style={{ ...styles.tableCell, borderRight: '1px solid black', width: 100, textAlign: 'center' }}>
       {item.hsnCode}
     </PdfText>
-    <PdfText style={{ ...styles.tableCell,  borderRight: '1px solid black', width: 80, textAlign: 'center' }}>
+    <PdfText style={{ ...styles.tableCell, borderRight: '1px solid black', width: 80, textAlign: 'center' }}>
       {item.quantity}
     </PdfText>
-    <PdfText style={{ ...styles.tableCell,  borderRight: '1px solid black', width: 100, textAlign: 'center' }}>
+    <PdfText style={{ ...styles.tableCell, borderRight: '1px solid black', width: 100, textAlign: 'center' }}>
       ₹{Number.isFinite(Number(item.rate)) ? Number(item.rate).toFixed(2) : 'N/A'}
     </PdfText>
-    <PdfText style={{ ...styles.tableCell,  borderRight: '1px solid black', width: 100, textAlign: 'center' }}>
-      ₹{item.amount.toFixed(2)}
+    <PdfText style={{ ...styles.tableCell, borderRight: '1px solid black', width: 100, textAlign: 'center' }}>
+      ₹{Number.isFinite(Number(item.amount)) ? Number(item.amount).toFixed(2) : '0.00'}
     </PdfText>
   </PdfView>
 ))}
@@ -329,7 +348,7 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
         <PdfView style={{flexDirection:'row', fontFamily:'Noto Sans', fontSize:12, justifyContent:'space-between' }}>
           <PdfView style={{flexDirection:'column', marginTop:8,}}>
             <PdfText>Amount In Words:</PdfText>
-            <PdfText style={{textDecoration:'underline', width:250}}>{totalInWords}</PdfText> 
+            <PdfText style={{textDecoration:'underline', width:250}}>{totalInWords} RUPEES ONLY</PdfText> 
             <PdfView style={{marginTop:8}}>
             <PdfView>ACCOUNT DETAILS:
             <PdfText>Bank: FEDERAL BANK</PdfText>
@@ -342,7 +361,7 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
          <PdfView style={styles.summary}>
           <PdfView style={styles.summaryRow}>
             <PdfText>Subtotal:</PdfText>
-            <PdfText>₹{subtotal.toFixed(2)}</PdfText>
+            <PdfText>₹{Number.isFinite(Number(subtotal)) ? Number(subtotal).toFixed(2) : '0.00'}</PdfText>
           </PdfView>
           <PdfView style={styles.summaryRow}>
             <PdfText>CGST ({data.cgst}%):</PdfText>
@@ -354,11 +373,11 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
           </PdfView>
           <PdfView style={[styles.summaryRow, styles.summaryTotal]}>
             <PdfText>Total:</PdfText>
-            <PdfText style={{fontFamily:'Noto Sans'}}>₹{total.toFixed(2)}</PdfText>
+            {/* Inside InvoicePDF Component */}
+            <PdfText>₹{Number.isFinite(Number(total)) ? Number(total).toFixed(2) : '0.00'}</PdfText>
           </PdfView>
         </PdfView>
       </PdfView>
-
         <PdfView style={styles.footer}>
           <PdfView style={styles.terms}>
             <PdfView>
@@ -367,15 +386,15 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({ data }) => {
               <PdfText key={index}>{term}</PdfText>
             ))}
             <PdfText style={{marginTop:10}}>Received the above mentioned materiale in good condition and</PdfText>
-            <PdfText>as per our order</PdfText>
+            <PdfText>as per order</PdfText>
             </PdfView>
-            <PdfText style={styles.companyNameFooter}>For <PdfText style={{ fontWeight: 'bold', fontSize:14 }}>AGASTHYA ENTERPRISES</PdfText></PdfText>
+            <PdfText style={styles.companyNameFooter}>For <PdfText style={{ fontFamily:'outfit', fontSize:13 }}>AGASTHYA ENTERPRISES</PdfText></PdfText>
           </PdfView>
 
           {/* Company Name and Authorized Signature side by side */}
           <PdfView style={styles.signatureSection}>
             <PdfView style={styles.leftSignature}>
-            <PdfText>Reciver signature</PdfText>
+            <PdfText>Receiver signature</PdfText>
             </PdfView>
             <PdfView style={styles.rightSignature}>
               <PdfText>Authorized Signature</PdfText>

@@ -5,19 +5,33 @@ import type { InvoiceData, Item } from '../types/invoice';
 import ItemRow from './ItemRow';
 import { db } from './firebase'; // Ensure this path is correct based on where your firebase setup is
 import {  doc, setDoc ,getDoc} from 'firebase/firestore';
-// import { PDFViewer } from '@react-pdf/renderer';
+import { PDFViewer } from '@react-pdf/renderer';
 import InvoicePDF from './InvoicePreview';
 
 interface InvoiceFormProps {
   onSubmit: (data: InvoiceData) => void;
 }
+const formatDate = (date: Date): string => {
+  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: '2-digit' };
+  return new Date(date).toLocaleDateString('en-GB', options).replace(',', '').replace(/\//g, '-');
+};
 
+const convertToInputFormat = (date: string): string => {
+  const [day, month, year] = date.split('-');
+  const monthMap: { [key: string]: string } = {
+    Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+    Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+  };
+  const monthNumber = monthMap[month];
+  return `${year}"-"${monthNumber}"-"${day}`;
+};
 export default function InvoiceForm({ onSubmit }: InvoiceFormProps) {
+  
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     invoiceNumber: '',
     phone: '9949993656',
     desp: '',
-    date: new Date().toISOString().split('T')[0],
+    date: formatDate(new Date()),
     customer: {
       name: '',
       address: '',
@@ -28,6 +42,18 @@ export default function InvoiceForm({ onSubmit }: InvoiceFormProps) {
     sgst: 0, 
     cgst: 0, 
   });
+  
+  // Event handler to handle the date change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value; // e.target.value will be in yyyy-MM-dd format
+    const formattedDate = new Date(newDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' }).replace(',', '').replace(/\//g, '-');
+    setInvoiceData(prev => ({
+      ...prev,
+      date: formattedDate,  // Store the date in dd-MMM-yyyy format
+    }));
+  };
+
+  // console.log(invoiceData.date)
 
 // export default function InvoiceForm({ onSubmit }: InvoiceFormProps) {
 //   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
@@ -108,7 +134,7 @@ export default function InvoiceForm({ onSubmit }: InvoiceFormProps) {
           invoiceNumber: '',
           phone: '',
           desp: '',
-          date: new Date().toISOString().split('T')[0],
+          date: invoiceData.date,
           customer: {
             name: '',
             address: '',
@@ -260,8 +286,8 @@ export default function InvoiceForm({ onSubmit }: InvoiceFormProps) {
               required
               type="date"
               className="mt-1 block w-full outline outline-zinc-600 rounded-md border-gray-300 shadow-sm"
-              value={invoiceData.date}
-              onChange={e => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
+              value={convertToInputFormat(invoiceData.date)}
+              onChange={handleDateChange} 
             />
           </div>
 
